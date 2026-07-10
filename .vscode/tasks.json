@@ -1,0 +1,75 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "PySide6：打开当前 UI 设计器",
+            "type": "process",
+            "command": "D:\\python\\anzhuang3.11.7\\Scripts\\pyside6-designer.exe",
+            "args": [
+                "${file}"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "never",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "PySide6：编译当前 UI 文件",
+            "type": "process",
+            "command": "D:\\python\\anzhuang3.11.7\\Scripts\\pyside6-uic.exe",
+            "args": [
+                "${file}",
+                "-o",
+                "${fileDirname}\\ui_${fileBasenameNoExtension}.py"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            }
+        },
+        {
+            "label": "PySide6：选择 UI 文件并打开 Designer",
+            "type": "process",
+            "command": "powershell.exe",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "$ui = Get-ChildItem -Path '${workspaceFolder}' -Filter '*.ui' -File -Recurse | Select-Object -ExpandProperty FullName | Out-GridView -Title '选择要打开的 UI 文件' -PassThru; if ($ui) { & 'D:\\python\\anzhuang3.11.7\\Scripts\\pyside6-designer.exe' $ui }"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "never",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "PySide6：选择 UI 文件并编译",
+            "type": "process",
+            "command": "powershell.exe",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "$ui = Get-ChildItem -Path '${workspaceFolder}' -Filter '*.ui' -File -Recurse | Select-Object -ExpandProperty FullName | Out-GridView -Title '选择要编译的 UI 文件' -PassThru; if ($ui) { $name = [System.IO.Path]::GetFileNameWithoutExtension($ui); $dir = Split-Path $ui; $output = Join-Path $dir ('ui_' + $name + '.py'); & 'D:\\python\\anzhuang3.11.7\\Scripts\\pyside6-uic.exe' $ui '-o' $output; Write-Host ('已生成：' + $output) }"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            }
+        }
+    ]
+}

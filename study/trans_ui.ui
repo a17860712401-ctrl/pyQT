@@ -16,14 +16,14 @@
   <widget class="QPushButton" name="pushButton">
    <property name="geometry">
     <rect>
-     <x>90</x>
-     <y>40</y>
+     <x>120</x>
+     <y>120</y>
      <width>75</width>
      <height>23</height>
     </rect>
    </property>
    <property name="text">
-    <string>pyqt6按钮</string>
+    <string>12321</string>
    </property>
   </widget>
  </widget>
