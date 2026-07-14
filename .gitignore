@@ -1,3 +1,24 @@
 debug.log
-__pycache__/
-*.pyc
+
+# Python caches and virtual environments
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.venv/
+**/*.egg-info/
+
+# Build and packaging outputs (.spec files remain trackable)
+**/build/
+**/dist/
+
+# Runtime data
+**/logs/
+**/*.sqlite3
+**/*.sqlite3-shm
+**/*.sqlite3-wal
+
+# Local planning notes, not part of the deliverable source
+/compress_data/findings.md
+/compress_data/progress.md
+/compress_data/task_plan.md
+/compress_data/docs/superpowers/
