@@ -17,6 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QLabel, QPushButton, QSizePolicy,
     QWidget)
+import sys
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -42,3 +43,10 @@ class Ui_Form(object):
         self.label.setText(QCoreApplication.translate("Form", u"python_helllo", None))
     # retranslateUi
 
+if __name__ == "__main__":
+    
+    app = QApplication(sys.argv)
+    w = QWidget()
+    Ui_Form().setupUi(w)   
+    w.show()
+    sys.exit(app.exec())

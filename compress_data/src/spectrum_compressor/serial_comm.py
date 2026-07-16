@@ -77,7 +77,7 @@ class SerialWorker:
         store: StateStore,
         *,
         serial_factory: SerialFactory | None = None,
-        minimum_file_interval: float = 1.0,
+        minimum_file_interval: float = 4.0,
         poll_interval: float = 0.2,
         log_callback: LogCallback | None = None,
         status_callback: SerialStatusCallback | None = None,

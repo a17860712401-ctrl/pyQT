@@ -169,6 +169,7 @@ class MainWindow(QMainWindow):
     def _build_status_group(self) -> QGroupBox:
         group = QGroupBox("运行状态")
         layout = QGridLayout(group)
+
         definitions = (
             ("discovered", "已发现"),
             ("compressed", "已压缩"),
@@ -177,20 +178,36 @@ class MainWindow(QMainWindow):
             ("failed", "压缩失败"),
             ("failed_send", "发送文件错误"),
         )
+
         for column, (key, title) in enumerate(definitions):
             frame = QFrame()
             frame.setObjectName("metricCard")
             card_layout = QVBoxLayout(frame)
+
             value_label = QLabel("0")
             value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             value_label.setObjectName("metricValue")
+
             title_label = QLabel(title)
             title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             title_label.setObjectName("metricTitle")
+
             card_layout.addWidget(value_label)
             card_layout.addWidget(title_label)
             layout.addWidget(frame, 0, column)
             self.count_labels[key] = value_label
+
+        self.reset_all_button = QPushButton("清空并重新开始")
+        self.reset_all_button.setObjectName("dangerButton")
+        layout.addWidget(
+            self.reset_all_button,
+            1,
+            0,
+            1,
+            len(definitions),
+            Qt.AlignmentFlag.AlignRight,
+        )
+
         return group
 
     def _build_log_group(self) -> QGroupBox:
@@ -216,6 +233,7 @@ class MainWindow(QMainWindow):
         self.serial_button.clicked.connect(self._toggle_serial)
         self.task_button.clicked.connect(self._toggle_tasks)
         self.clear_log_button.clicked.connect(self.log_view.clear)
+        self.reset_all_button.clicked.connect(self._reset_all_data)
         self.controller.log_message.connect(self._append_log)
         self.controller.counts_changed.connect(self._on_counts_changed)
         self.controller.task_state_changed.connect(self._on_task_state_changed)
@@ -281,6 +299,93 @@ class MainWindow(QMainWindow):
             )
         except Exception as error:
             QMessageBox.critical(self, "启动任务失败", str(error))
+    
+    def _reset_all_data(self) -> None:
+        if self._task_running:
+            QMessageBox.warning(
+                self,
+                "无法清空",
+                "请先手动停止处理任务，然后再执行清空操作。",
+            )
+            return
+
+        if self._serial_open:
+            QMessageBox.warning(
+                self,
+                "无法清空",
+                "请先手动关闭串口，然后再执行清空操作。",
+            )
+            return
+
+        input_directory = self.input_path_edit.text().strip()
+        output_directory = self.output_path_edit.text().strip()
+
+        if not input_directory or not output_directory:
+            QMessageBox.warning(
+                self,
+                "文件夹配置",
+                "请先选择输入文件夹和输出文件夹。",
+            )
+            return
+
+        confirmation = QMessageBox.warning(
+            self,
+            "确认清空并重新开始",
+            (
+                "该操作不可恢复，将执行以下操作：\n\n"
+                "1. 删除输入文件夹第一层的全部 TXT 文件；\n"
+                "2. 删除输出文件夹第一层的全部 TXT 文件；\n"
+                "3. 清空全部处理和串口发送记录；\n"
+                "4. 清空当前日志和全部历史日志；\n"
+                "5. 所有统计数字归零，文件序号重新从 1 开始。\n\n"
+                f"输入文件夹：\n{input_directory}\n\n"
+                f"输出文件夹：\n{output_directory}\n\n"
+                "确定继续吗？"
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+
+        if confirmation != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+            self._save_config()
+
+            deleted_input, deleted_output = self.controller.reset_all_data(
+                input_directory,
+                output_directory,
+            )
+
+            self.log_view.clear()
+            self.controller.refresh_counts()
+
+            message = (
+                f"清空完成：删除输入 TXT {deleted_input} 个，"
+                f"删除输出 TXT {deleted_output} 个。"
+            )
+            self.statusBar().showMessage(message, 8000)
+
+            QMessageBox.information(
+                self,
+                "清空完成",
+                (
+                    f"输入文件夹删除了 {deleted_input} 个 TXT 文件。\n"
+                    f"输出文件夹删除了 {deleted_output} 个 TXT 文件。\n\n"
+                    "处理记录、发送记录和运行日志均已清空。\n"
+                    "现在可以重新打开串口并启动任务。"
+                ),
+            )
+        except Exception as error:
+            QMessageBox.critical(
+                self,
+                "清空失败",
+                (
+                    f"清空过程中发生错误：\n{error}\n\n"
+                    "请检查文件是否被其他程序占用，"
+                    "并确认输入输出文件夹具有删除权限。"
+                ),
+            )
 
     def _current_serial_settings(self) -> SerialSettings:
         return SerialSettings(
@@ -329,6 +434,7 @@ class MainWindow(QMainWindow):
         for widget in self._directory_widgets:
             widget.setEnabled(not running)
         self._refresh_status_style(self.task_status_label)
+        self._update_reset_button_state()
 
     def _on_serial_state_changed(self, opened: bool, message: str) -> None:
         self._serial_open = opened
@@ -338,7 +444,21 @@ class MainWindow(QMainWindow):
         for widget in self._serial_parameter_widgets:
             widget.setEnabled(not opened)
         self._refresh_status_style(self.serial_status_label)
+        self._update_reset_button_state()
 
+    def _update_reset_button_state(self) -> None:
+        can_reset = not self._task_running and not self._serial_open
+        self.reset_all_button.setEnabled(can_reset)
+
+        if can_reset:
+            self.reset_all_button.setToolTip(
+                "删除工作目录中的TXT文件并清空全部历史记录"
+            )
+        else:
+            self.reset_all_button.setToolTip(
+                "请先停止任务并关闭串口"
+            ) 
+      
     def _on_counts_changed(self, counts: dict[str, int]) -> None:
         for key, label in self.count_labels.items():
             label.setText(str(counts.get(key, 0)))
@@ -391,6 +511,21 @@ class MainWindow(QMainWindow):
             QPushButton#primaryButton { color: white; background: #246bce; border-color: #246bce; min-width: 100px; }
             QPushButton#primaryButton:hover { background: #185bb6; }
             QPushButton#secondaryButton { min-width: 100px; }
+            QPushButton#dangerButton {
+                color: white;
+                background: #c63d3d;
+                border-color: #c63d3d;
+                margin-top: 8px;
+            }
+            QPushButton#dangerButton:hover {
+                background: #ab2f2f;
+            }
+            QPushButton#dangerButton:disabled {
+                color: #9ba6b5;
+                background: #eef1f5;
+                border-color: #d6dce5;
+            }        
+                
             QLabel#statusPill { background: #e8edf4; color: #59677c; border-radius: 10px; padding: 4px 10px; }
             QLabel#statusPill[active="true"] { background: #dff5e8; color: #167344; }
             QFrame#metricCard { background: #f7f9fc; border: 1px solid #e2e7f0; border-radius: 6px; }

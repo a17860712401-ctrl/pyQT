@@ -7,8 +7,11 @@ from typing import Callable
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
+from .config import default_log_path
+from .logging_setup import reset_application_logging
 from .models import SerialSettings
-from .monitoring import ProcessingService
+from .monitoring import ProcessingService, scan_txt_files
+
 from .serial_comm import SerialPortInfo, SerialWorker, list_serial_ports
 from .storage import StateStore
 
@@ -127,6 +130,60 @@ class ApplicationController(QObject):
         counts = self.store.counts()
         self.counts_changed.emit(counts)
         return counts
+    
+    def reset_all_data(
+        self,
+        input_directory: Path | str,
+        output_directory: Path | str,
+        *,
+        log_path: Path | str | None = None,
+    ) -> tuple[int, int]:
+        """删除工作文件和全部历史记录，让软件重新开始计数。"""
+
+        input_path = Path(input_directory).expanduser().resolve(strict=False)
+        output_path = Path(output_directory).expanduser().resolve(strict=False)
+
+        with self._state_lock:
+            processing_running = (
+                self._processing_thread is not None
+                and self._processing_thread.is_alive()
+            )
+            serial_open = (
+                self._serial_worker is not None
+                and self._serial_worker.is_open
+            )
+
+        if processing_running:
+            raise RuntimeError("请先手动停止处理任务")
+
+        if serial_open:
+            raise RuntimeError("请先手动关闭串口")
+
+        if not input_path.is_dir():
+            raise ValueError("输入文件夹不存在或不可访问")
+
+        if not output_path.is_dir():
+            raise ValueError("输出文件夹不存在或不可访问")
+
+        if input_path == output_path:
+            raise ValueError("输入文件夹和输出文件夹不能相同")
+
+        input_txt_files = scan_txt_files(input_path, sort_by_time=False)
+        output_txt_files = scan_txt_files(output_path, sort_by_time=False)
+
+        for file_path in input_txt_files:
+            file_path.unlink()
+
+        for file_path in output_txt_files:
+            file_path.unlink()
+
+        self.store.reset_all()
+        reset_application_logging(log_path or default_log_path())
+
+        counts = self.store.counts()
+        self.counts_changed.emit(counts)
+
+        return len(input_txt_files), len(output_txt_files)
 
     def shutdown(self, *, timeout: float = 5.0) -> bool:
         processing_stopped = self.stop_tasks(timeout=timeout)

@@ -213,6 +213,20 @@ class StateStore:
                 (error[:2000], output_id),
             )
 
+    def reset_all(self) -> None:
+        """清空全部处理和发送记录，并让文件序号重新从 1 开始。"""
+
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            connection.execute("DELETE FROM output_files")
+            connection.execute("DELETE FROM input_files")
+            connection.execute(
+                """
+                DELETE FROM sqlite_sequence
+                WHERE name IN ('input_files', 'output_files')
+                """
+            )
+            
     def counts(self) -> dict[str, int]:
         with self._connect() as connection:
             discovered = _scalar(connection, "SELECT COUNT(*) FROM input_files")

@@ -47,3 +47,24 @@ def close_application_logging() -> None:
             handler.close()
         finally:
             logger.removeHandler(handler)
+
+
+def reset_application_logging(log_path: Path | str) -> logging.Logger:
+    """删除当前日志及全部轮换日志，然后重新启用空日志。"""
+
+    close_application_logging()
+
+    path = Path(log_path)
+    log_files = [path]
+
+    if path.parent.exists():
+        for candidate in path.parent.glob(f"{path.name}.*"):
+            rotated_suffix = candidate.name[len(path.name) + 1 :]
+            if candidate.is_file() and rotated_suffix.isdigit():
+                log_files.append(candidate)
+
+    for log_file in log_files:
+        log_file.unlink(missing_ok=True)
+
+    return configure_logging(path)
+

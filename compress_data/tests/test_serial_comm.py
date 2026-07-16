@@ -88,12 +88,12 @@ class SerialCommunicationTests(unittest.TestCase):
 
         delay = worker.send_next_once(now=100, monotonic_now=10)
 
-        self.assertEqual(delay, 1.0)
+        self.assertEqual(delay, 4.0)
         first = self.store.next_pending_output(now=101)
         self.assertEqual(Path(first.path), first_path.resolve())
         self.assertEqual(first.attempts, 1)
 
-    def test_files_start_at_least_one_second_apart(self) -> None:
+    def test_files_start_at_least_four_second_apart(self) -> None:
         fake = FakeSerial()
         worker = self._worker(fake)
         self._queue("first.txt", "00000001\n")
@@ -102,9 +102,9 @@ class SerialCommunicationTests(unittest.TestCase):
 
         delay = worker.send_next_once(now=100.5, monotonic_now=10.5)
 
-        self.assertAlmostEqual(delay, 0.5)
+        self.assertAlmostEqual(delay, 3.5)
         self.assertEqual(len(fake.writes), 1)
-        worker.send_next_once(now=101, monotonic_now=11)
+        worker.send_next_once(now=101, monotonic_now=14)
         self.assertEqual(len(fake.writes), 2)
 
     def test_malformed_file_is_failed_and_does_not_block_queue(self) -> None:
@@ -127,7 +127,7 @@ class SerialCommunicationTests(unittest.TestCase):
 
         delay = worker.send_next_once(now=100, monotonic_now=10)
 
-        self.assertEqual(delay, 1.0)
+        self.assertEqual(delay, 4.0)
         pending = self.store.next_pending_output(now=101)
         self.assertEqual(pending.attempts, 1)
         self.assertIn("No such file", pending.last_error)

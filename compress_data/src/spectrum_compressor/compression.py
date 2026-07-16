@@ -10,9 +10,9 @@ from typing import Iterable, Sequence
 
 from .models import CompressionResult, SpectrumPoint
 
-ANCHOR_WAVENUMBERS = (200.0, 800.0, 1400.0, 2000.0, 2600.0, 3200.0, 3800.0, 4400.0)
-NEIGHBORHOOD_RADIUS = 10
-DOWNSAMPLE_STRIDE = 30
+ANCHOR_WAVENUMBERS = (981.0, 1386.0, 2911.0, 2578.0, 2593.0, 4134.0)
+NEIGHBORHOOD_RADIUS = 9
+DOWNSAMPLE_STRIDE = 35
 _SPLIT_PATTERN = re.compile(r"[,，\s]+")
 
 
