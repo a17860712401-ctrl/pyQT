@@ -6,6 +6,7 @@ debug.log
 **/.pytest_cache/
 **/.venv/
 **/*.egg-info/
+/.worktrees/
 
 # Build and packaging outputs (.spec files remain trackable)
 **/build/
